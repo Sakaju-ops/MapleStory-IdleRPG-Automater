@@ -35,7 +35,7 @@ class MapleStoryIdleBot:
     - app_button: Open the game
     - main_menu: Menu button (top-right)
     - pq_button: Party Quest button
-    - sleepywood/ludibrium: Quest selection
+    - sleepywood/ludibrium/orbis: Quest selection
     - start_queue: Start queue button
     - in_queue: Waiting in queue
     - stop_queue: Cancel queue button
@@ -43,6 +43,7 @@ class MapleStoryIdleBot:
     - loading_screen, loading_screen2, loading_screen3, loading_screen4, loading_screen5: Game loading
     - wave_1, wave_2, wave_3: In PQ (Sleepywood waves)
     - wave_11, wave_22, wave_33: In PQ (Ludibrium waves)
+    - wave_111, wave_222, wave_333: In PQ (orbis waves)
     - clear: PQ complete indicator (triggers PQ finish)
     - failed: PQ failed mid-run indicator (triggers recovery)
     - red_alert: Boss red attack indicator (wave 3 only) - triggers immediate double-jump
@@ -55,6 +56,7 @@ class MapleStoryIdleBot:
         "pq_button": (480, 400),
         "sleepywood": (300, 350),
         "ludibrium": (480, 350),
+        "orbis": (660, 350),
         "start_queue": (480, 450),
         "stop_queue": (750, 480),
         "confirm": (480, 400),
