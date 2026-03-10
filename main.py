@@ -1,24 +1,24 @@
-#!/usr/bin/env python3
-"""
-MapleStory Idle Bot - Main Entry Point
-
-A bot that automates party quests in MapleStory Idle via BlueStacks.
-
-Usage:
+    #!/usr/bin/env python3
+    """
+    MapleStory Idle Bot - Main Entry Point
+    
+    A bot that automates party quests in MapleStory Idle via BlueStacks.
+    
+    Usage:
     python main.py          # Launch GUI
     python main.py --cli    # Run in CLI mode
     python main.py --help   # Show help
-"""
-
-import argparse
-import sys
-from pathlib import Path
-
-# Add parent to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
-
-
-def run_gui():
+    """
+    
+    import argparse
+    import sys
+    from pathlib import Path
+    
+    # Add parent to path for imports
+    sys.path.insert(0, str(Path(__file__).parent))
+    
+    
+    def run_gui():
     """Launch the graphical user interface."""
     try:
         from gui.launcher import BotLauncher
@@ -28,9 +28,9 @@ def run_gui():
         print(f"Error: GUI dependencies not installed: {e}")
         print("Install with: pip install customtkinter pillow")
         sys.exit(1)
-
-
-def run_cli(args):
+    
+    
+    def run_cli(args):
     """Run in command-line interface mode."""
     from core.adb_controller import ADBController
     from core.logger import setup_logger
@@ -82,21 +82,21 @@ def run_cli(args):
     finally:
         bot.stop()
         adb.disconnect()
-
-
-def main():
+    
+    
+    def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description="MapleStory Idle Bot - Automate party quests via BlueStacks",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
+    Examples:
     python main.py                    # Launch GUI
     python main.py --cli              # Run in CLI mode with default config
     python main.py --cli --port 5555  # Specify ADB port
     python main.py --cli --quest ludibrium --solo  # Ludibrium solo mode
-
-BlueStacks Setup:
+    
+    BlueStacks Setup:
     1. Set resolution to 960x540 (Settings > Display)
     2. Set pixel density to 240 DPI
     3. Enable ADB (Settings > Advanced > Android Debug Bridge)
@@ -152,5 +152,5 @@ BlueStacks Setup:
         run_cli(args)
     else:
         run_gui()
-if __name__ == "__main__":
+    if __name__ == "__main__":
     main()
