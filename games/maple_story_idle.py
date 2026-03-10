@@ -521,7 +521,6 @@ class MapleStoryIdleBot:
             return 2
             if self.matcher.find(screen, "wave_11"):
             return 1
-        
         elif self.quest_choice == "orbis":
             if self.matcher.find(screen, "wave_333"):
             return 3
