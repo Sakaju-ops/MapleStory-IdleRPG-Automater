@@ -227,6 +227,20 @@ class BotLauncher:
             command=lambda: self._select_quest("ludibrium")
         )
         self.ludi_btn.pack(side="left", padx=(6, 0))
+
+        self.orbis_btn = ctk.CTkButton(
+            quest_row,
+            text="orbis",
+            width=100,
+            height=32,
+            font=ctk.CTkFont(size=11),
+            fg_color=self.COLORS["input_bg"],      # DOWN INCL
+            hover_color=self.COLORS["border"],
+            text_color=self.COLORS["text_secondary"],
+            corner_radius=6,
+            command=lambda: self._select_quest("ludibrium")
+        )
+        self.ludi_btn.pack(side="left", padx=(6, 0))
         
         # Options row
         options_row = ctk.CTkFrame(inner, fg_color="transparent")
