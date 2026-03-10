@@ -21,13 +21,13 @@ from core.template_matcher import TemplateMatcher, MatchResult
 from core.input_handler import InputHandler
     
     
-    class BotState(Enum):
+class BotState(Enum):
     IDLE = auto()
     RUNNING = auto()
     STOPPED = auto()
     
     
-    class MapleStoryIdleBot:
+class MapleStoryIdleBot:
     """
     MapleStory Idle Bot - Freestyle detection.
     
