@@ -1,36 +1,36 @@
-"""
-MapleStory Idle Bot - Automated party quest runner.
-Smart detection based on available templates.
-"""
-import random
-import time
-import sys
-from datetime import datetime, timedelta
-from enum import Enum, auto
-from typing import Optional, Dict, Any, Callable
-import logging
-from pathlib import Path
-
-_parent_dir = str(Path(__file__).parent.parent)
-if _parent_dir not in sys.path:
+    """
+    MapleStory Idle Bot - Automated party quest runner.
+    Smart detection based on available templates.
+    """
+    import random
+    import time
+    import sys
+    from datetime import datetime, timedelta
+    from enum import Enum, auto
+    from typing import Optional, Dict, Any, Callable
+    import logging
+    from pathlib import Path
+    
+    _parent_dir = str(Path(__file__).parent.parent)
+    if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
-
-from core.adb_controller import ADBController
-from core.screen_capture import ScreenCapture
-from core.template_matcher import TemplateMatcher, MatchResult
-from core.input_handler import InputHandler
-
-
-class BotState(Enum):
+    
+    from core.adb_controller import ADBController
+    from core.screen_capture import ScreenCapture
+    from core.template_matcher import TemplateMatcher, MatchResult
+    from core.input_handler import InputHandler
+    
+    
+    class BotState(Enum):
     IDLE = auto()
     RUNNING = auto()
     STOPPED = auto()
-
-
-class MapleStoryIdleBot:
+    
+    
+    class MapleStoryIdleBot:
     """
     MapleStory Idle Bot - Freestyle detection.
-
+    
     Templates:
     - app_button: Open the game
     - main_menu: Menu button (top-right)
@@ -49,7 +49,7 @@ class MapleStoryIdleBot:
     - red_alert: Boss red attack indicator (wave 3 only) - triggers immediate double-jump
     - jump: Jump button for avoiding attacks
     """
-
+    
     POSITIONS = {
         "center": (480, 270),
         "main_menu": (900, 50),
@@ -61,39 +61,39 @@ class MapleStoryIdleBot:
         "stop_queue": (750, 480),
         "confirm": (480, 400),
     }
-
+    
     def __init__(self, adb: ADBController, config: Dict[str, Any], logger: Optional[logging.Logger] = None):
         self.adb = adb
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
-
+    
         self.screen = ScreenCapture(adb, logger)
         self.matcher = TemplateMatcher(
             templates_dir=config.get("templates_dir", "templates/maple_story_idle"),
             logger=logger
         )
         self.input = InputHandler(adb, logger)
-
+    
         # State
         self.state = BotState.IDLE
         self.running = False
         self.paused = False
-
+    
         # Stats
         self.pq_runs = 0
         self.queue_timeouts = 0
         self.start_time: Optional[datetime] = None
-
+    
         # Config
         self.queue_timeout = config.get("queue-timeout", 30)  # seconds
         self.quest_choice = config.get("quest-choice", "sleepywood")
-
+    
         # Tracking
         self.queue_start_time: Optional[datetime] = None
         self.in_queue = False
         self.in_pq = False
         self.current_wave = 0
-
+    
         # Watchdog - restart if stuck for too long
         self.stuck_timeout = config.get("stuck-timeout", 120)  # 2 minutes default
         self.soft_stuck_timeout = self.stuck_timeout // 2
@@ -101,44 +101,44 @@ class MapleStoryIdleBot:
         self.soft_recovery_attempted = False
         self.restarts = 0
         self.recoveries = 0
-
+    
         # Track consecutive queue timeouts
         self.consecutive_queue_timeouts = 0
         self.max_consecutive_timeouts = config.get("max-queue-timeouts", 5)
-
+    
         # Track time since last PQ entry
         self.last_pq_entry_time: Optional[datetime] = None
         self.pq_timeout_levels = [450, 900]  # 7.5min, 15min
         self.current_pq_timeout_level = 0
-
+    
         # Random actions
         self.random_actions = config.get("random-jump", True)
         self.jump_interval = config.get("jump-interval", 30)
         self.last_jump_time: Optional[datetime] = None
-
+    
         # Hard reset tracking
         self.hard_resets = 0
-
+    
         # Game package name for force-stop
         self.game_package = config.get("game-package", "com.nexon.maplem.global")
-
+    
         # Callbacks
         self.on_state_change: Optional[Callable] = None
         self.on_stats_update: Optional[Callable] = None
         self.on_log: Optional[Callable] = None
-
+    
         # Duplicate log prevention
         self.last_log_message: Optional[str] = None
-
+    
     def _log(self, msg: str):
         if msg == self.last_log_message:
             return
         self.last_log_message = msg
-
+    
         self.logger.info(msg)
         if self.on_log:
             self.on_log(msg)
-
+    
     def _update_stats(self):
         if self.on_stats_update:
             status = "IN PQ" if self.in_pq else ("QUEUED" if self.in_queue else "RUNNING")
@@ -147,12 +147,12 @@ class MapleStoryIdleBot:
                 "runtime": str(datetime.now() - self.start_time).split('.')[0] if self.start_time else "00:00:00",
                 "state": status
             })
-
+    
     def _activity(self):
         """Mark that meaningful activity happened (resets stuck timer)."""
         self.last_activity_time = datetime.now()
         self.soft_recovery_attempted = False
-
+    
     def _check_stuck(self, screen) -> bool:
         """
         Multi-tier stuck detection:
@@ -163,7 +163,7 @@ class MapleStoryIdleBot:
         if self.last_activity_time is None:
             self._activity()
             return False
-
+    
         if self.last_pq_entry_time:
             current_timeout = self.pq_timeout_levels[self.current_pq_timeout_level]
             time_without_pq = (datetime.now() - self.last_pq_entry_time).total_seconds()
@@ -171,22 +171,22 @@ class MapleStoryIdleBot:
                 self._log(f"!!! NO PQ FOR {int(time_without_pq)}s ({int(time_without_pq/60)}min) - Hard reset !!!")
                 self._hard_reset_app()
                 return True
-
+    
         elapsed = (datetime.now() - self.last_activity_time).total_seconds()
-
+    
         if elapsed >= self.stuck_timeout:
             self._log(f"!!! HARD STUCK for {int(elapsed)}s - Restarting app !!!")
             self._restart_app()
             return True
-
+    
         if elapsed >= self.soft_stuck_timeout and not self.soft_recovery_attempted:
             self._log(f"!!! SOFT STUCK for {int(elapsed)}s - Attempting recovery !!!")
             self.soft_recovery_attempted = True
             if self._try_recovery(screen):
                 return True
-
+    
         return False
-
+    
     def _try_recovery(self, screen) -> bool:
         """
         Actively scan for ANY actionable template and act on it.
@@ -194,12 +194,12 @@ class MapleStoryIdleBot:
         """
         self.recoveries += 1
         self._log(f"Recovery #{self.recoveries} - Scanning all templates...")
-
+    
         if self.in_pq:
             self._log("Resetting PQ state...")
             self.in_pq = False
             self.current_wave = 0
-
+    
         actionable_templates = [
             ("lost_connection", "click"),
             ("exit", "click"),
@@ -214,7 +214,7 @@ class MapleStoryIdleBot:
             ("app_button", "click"),
             ("stop_queue", "click"),
         ]
-
+    
         for template, action in actionable_templates:
             match = self.matcher.find(screen, template)
             if match:
@@ -223,46 +223,46 @@ class MapleStoryIdleBot:
                 self._activity()
                 time.sleep(1)
                 return True
-
+    
         self._log("Recovery: No template found, tapping center...")
         self.input.tap(*self.POSITIONS["center"])
         time.sleep(1)
         return False
-
+    
     def _restart_app(self):
         """Close app and reset state to start fresh."""
         self.restarts += 1
         self._log(f"Restart #{self.restarts} - Closing app...")
-
+    
         for _ in range(5):
             self.input.press_back()
             time.sleep(0.3)
-
+    
         self.input.press_home()
         time.sleep(1)
-
+    
         self.in_pq = False
         self.in_queue = False
         self.current_wave = 0
         self.queue_start_time = None
         self.consecutive_queue_timeouts = 0
-
+    
         self._activity()
         self._log("App closed. Will restart from app_button detection...")
         time.sleep(2)
-
+    
     def _hard_reset_app(self):
         """Force-stop app via ADB and restart."""
         self.hard_resets += 1
         self._log(f"!!! HARD RESET #{self.hard_resets} - Killing app via Recent Apps !!!")
-
+    
         self.input.press_home()
         time.sleep(1)
-
+    
         self.adb.key_event(187)
         self._log("Opened Recent Apps")
         time.sleep(1)
-
+    
         screen = self.screen.capture(use_cache=False)
         if screen is not None:
             clear_all = self.matcher.find(screen, "clear_all")
@@ -274,32 +274,32 @@ class MapleStoryIdleBot:
                 self._log("CLEAR ALL not found - tapping common position")
                 self.input.tap(480, 500)
                 time.sleep(1)
-
+    
         self.input.press_home()
         time.sleep(1)
-
+    
         try:
             self.adb.shell(f"am force-stop {self.game_package}")
         except Exception:
             pass
-
+    
         time.sleep(1)
-
+    
         self.in_pq = False
         self.in_queue = False
         self.current_wave = 0
         self.queue_start_time = None
         self.consecutive_queue_timeouts = 0
         self.last_pq_entry_time = datetime.now()
-
+    
         if self.current_pq_timeout_level < len(self.pq_timeout_levels) - 1:
             self.current_pq_timeout_level += 1
         next_timeout = self.pq_timeout_levels[self.current_pq_timeout_level]
-
+    
         self._activity()
         self._log(f"Apps cleared. Next PQ timeout: {next_timeout//60}min. Looking for app_button...")
         time.sleep(2)
-
+    
     def start(self):
         self._log("=" * 40)
         self._log("  MapleStory Idle Bot")
@@ -307,19 +307,19 @@ class MapleStoryIdleBot:
         self._log(f"Quest: {self.quest_choice}")
         self._log(f"Queue timeout: {self.queue_timeout}s")
         self._log(f"Stuck timeout: {self.stuck_timeout}s")
-
+    
         self.running = True
         self.start_time = datetime.now()
         self.state = BotState.RUNNING
         self._activity()
         self.last_pq_entry_time = datetime.now()
-
+    
         if self.on_state_change:
             self.on_state_change(self.state)
-
+    
         loaded = self.matcher.preload_templates()
         self._log(f"Loaded {loaded} templates")
-
+    
         try:
             while self.running:
                 if self.paused:
@@ -331,28 +331,28 @@ class MapleStoryIdleBot:
             self._log(f"Error: {e}")
         finally:
             self.stop()
-
+    
     def stop(self):
         self.running = False
         self.state = BotState.STOPPED
         if self.on_state_change:
             self.on_state_change(self.state)
         self._log(f"Stopped. Runs: {self.pq_runs}, Timeouts: {self.queue_timeouts}")
-
+    
     def pause(self):
         self.paused = True
-
+    
     def resume(self):
         self.paused = False
-
+    
     def _tick(self):
         """Main tick - detect and act."""
         self._update_stats()
-
+    
         screen = self.screen.capture(use_cache=False)
         if screen is None:
             return
-
+    
         if self._check_and_click(screen, "lost_connection"):
             self._log("!!! LOST CONNECTION - Clicking OK !!!")
             self._activity()
@@ -362,26 +362,26 @@ class MapleStoryIdleBot:
             self.consecutive_queue_timeouts = 0
             time.sleep(2)
             return
-
+    
         if self._check_and_click(screen, "event"):
             self._log("Event popup - closing")
             time.sleep(1)
             return
-
+    
         if self._check_and_click(screen, "leave_party"):
             self._log("In party mode - leaving party")
             time.sleep(1)
             return
-
+    
         if self._check_stuck(screen):
             return
-
+    
         if self.in_pq:
             self._activity()
-
+    
             if self.current_wave == 3:
                 self._check_red_alert(screen)
-
+    
             if self.matcher.find(screen, "failed"):
                 self._log("!!! PQ FAILED - Recovering !!!")
                 self.in_pq = False
@@ -389,7 +389,7 @@ class MapleStoryIdleBot:
                 self._activity()
                 self.input.tap(*self.POSITIONS["center"])
                 time.sleep(1.5)
-
+    
                 new_screen = self.screen.capture(use_cache=False)
                 if new_screen is not None:
                     if self._check_and_click(new_screen, "start_queue"):
@@ -400,7 +400,7 @@ class MapleStoryIdleBot:
                         self.input.tap(*self.POSITIONS["center"])
                 time.sleep(1)
                 return
-
+    
             if self._check_and_click(screen, "start_queue"):
                 self._log("!!! PQ FAILED (detected via start_queue) - Restarting queue !!!")
                 self.in_pq = False
@@ -410,7 +410,7 @@ class MapleStoryIdleBot:
                 self.queue_start_time = datetime.now()
                 time.sleep(1)
                 return
-
+    
             if self.matcher.find(screen, "clear"):
                 self._log("PQ finished!")
                 self.in_pq = False
@@ -420,26 +420,26 @@ class MapleStoryIdleBot:
                 self._log(f"=== PQ #{self.pq_runs} Complete! ===")
                 time.sleep(1)
                 return
-
+    
             wave = self._check_wave(screen)
             if wave > 0 and wave != self.current_wave:
                 self._log(f"Wave {wave}")
                 self.current_wave = wave
-
+    
             if self.current_wave == 3:
                 self._check_red_alert(screen)
-
+    
             self._try_jump(screen)
-
+    
             time.sleep(0.5)
             return
-
+    
         if self._check_and_click(screen, "confirm"):
             self._log(">>> CONFIRM clicked!")
             self._activity()
             time.sleep(1)
             return
-
+    
         wave = self._check_wave(screen)
         if wave > 0:
             self._log(f"Entered PQ! Wave {wave}")
@@ -451,13 +451,13 @@ class MapleStoryIdleBot:
             self._activity()
             time.sleep(3)
             return
-
+    
         if self.in_queue:
             self._handle_queue(screen)
             return
-
+    
         self._detect_and_act(screen)
-
+    
     def _check_wave(self, screen) -> int:
         """Check if any wave indicator is visible. Returns wave number or 0."""
         if self.quest_choice == "ludibrium":
@@ -467,7 +467,7 @@ class MapleStoryIdleBot:
                 return 2
             if self.matcher.find(screen, "wave_11"):
                 return 1
-
+    
         elif self.quest_choice == "orbis":
             if self.matcher.find(screen, "wave_333"):
                 return 3
@@ -475,7 +475,7 @@ class MapleStoryIdleBot:
                 return 2
             if self.matcher.find(screen, "wave_111"):
                 return 1
-
+    
         else:  # sleepywood
             if self.matcher.find(screen, "wave_3"):
                 return 3
@@ -483,9 +483,9 @@ class MapleStoryIdleBot:
                 return 2
             if self.matcher.find(screen, "wave_1"):
                 return 1
-
+    
         return 0
-
+    
     def _get_queue_template(self) -> str:
         """Get the in_queue template name based on quest choice."""
         if self.quest_choice == "ludibrium":
@@ -494,7 +494,7 @@ class MapleStoryIdleBot:
             return "in_queue_orbis"
         else:
             return "in_queue"
-
+    
     def _check_and_click(self, screen, template: str) -> bool:
         """Check for template and click if found."""
         match = self.matcher.find(screen, template)
@@ -502,7 +502,7 @@ class MapleStoryIdleBot:
             self.input.tap_center(match)
             return True
         return False
-
+    
     def _try_jump(self, screen):
         """
         Try to double-tap jump button during PQ (if random_actions enabled).
@@ -510,12 +510,12 @@ class MapleStoryIdleBot:
         """
         if not self.random_actions:
             return
-
+    
         if self.last_jump_time:
             elapsed = (datetime.now() - self.last_jump_time).total_seconds()
             if elapsed < self.jump_interval:
                 return
-
+    
         match = self.matcher.find(screen, "jump")
         if match:
             self._log("Jumping!")
@@ -523,7 +523,7 @@ class MapleStoryIdleBot:
             time.sleep(0.1)
             self.input.tap_center(match)
             self.last_jump_time = datetime.now()
-
+    
     def _check_red_alert(self, screen) -> bool:
         """
         Check for red alert (boss red attack) during wave 3.
@@ -531,13 +531,13 @@ class MapleStoryIdleBot:
         """
         if self.current_wave != 3:
             return False
-
+    
         red_alert = self.matcher.find(screen, "red_alert")
         if not red_alert:
             return False
-
+    
         self._log("!!! RED ALERT - JUMPING !!!")
-
+    
         jump = self.matcher.find(screen, "jump")
         if jump:
             self.input.tap_center(jump)
@@ -545,34 +545,34 @@ class MapleStoryIdleBot:
             self.input.tap_center(jump)
             self.last_jump_time = datetime.now()
             return True
-
+    
         self._log("Jump button not found!")
         return False
-
+    
     def _handle_queue(self, screen):
         """Handle being in queue."""
         if self.queue_start_time:
             elapsed = (datetime.now() - self.queue_start_time).total_seconds()
-
+    
             if elapsed >= self.queue_timeout:
                 self._log(f"Queue timeout ({self.queue_timeout}s)! Canceling...")
                 self.queue_timeouts += 1
                 self.consecutive_queue_timeouts += 1
-
+    
                 if self.consecutive_queue_timeouts >= self.max_consecutive_timeouts:
                     self._log(f"!!! {self.consecutive_queue_timeouts} consecutive queue timeouts - Restarting app !!!")
                     self._restart_app()
                     return
-
+    
                 self._cancel_queue(screen)
                 return
-
+    
             if int(elapsed) % 10 == 0 and int(elapsed) > 0:
                 self._log(f"Queue: {int(elapsed)}s / {self.queue_timeout}s")
-
+    
         if self.matcher.find(screen, self._get_queue_template()):
             return
-
+    
         if self._check_wave(screen):
             self._log("PQ starting!")
             self.in_queue = False
@@ -582,25 +582,25 @@ class MapleStoryIdleBot:
             self.last_jump_time = None
             self._activity()
             return
-
+    
         self._log("Left queue")
         self.in_queue = False
         self._detect_and_act(screen)
-
+    
     def _cancel_queue(self, screen):
         """Cancel the queue."""
         self.in_queue = False
-
+    
         if self._check_and_click(screen, "stop_queue"):
             self._log("Clicked stop queue")
             time.sleep(1)
             return
-
+    
         self.input.tap(*self.POSITIONS["stop_queue"])
         time.sleep(0.3)
         self.input.press_back()
         time.sleep(1)
-
+    
     def _detect_and_act(self, screen):
         """Detect where we are and take action."""
         if (
@@ -614,7 +614,7 @@ class MapleStoryIdleBot:
             self._activity()
             time.sleep(1)
             return
-
+    
         if self.matcher.find(screen, self._get_queue_template()):
             if not self.in_queue:
                 self._log("Now in queue!")
@@ -622,7 +622,7 @@ class MapleStoryIdleBot:
                 self.queue_start_time = datetime.now()
                 self._activity()
             return
-
+    
         if self._check_and_click(screen, "start_queue"):
             self._log("Clicking START QUEUE")
             self._activity()
@@ -630,7 +630,7 @@ class MapleStoryIdleBot:
             self.in_queue = True
             self.queue_start_time = datetime.now()
             return
-
+    
         # Special handling for ORBIS - use fixed click position
         if quest == "orbis":
             self._log("Selecting ORBIS (forced position click)")
@@ -652,19 +652,19 @@ class MapleStoryIdleBot:
             self._activity()
             time.sleep(1)
             return
-
+    
         if self._check_and_click(screen, "main_menu"):
             self._log("Opening main menu")
             self._activity()
             time.sleep(2.5)
             return
-
+    
         if self._check_and_click(screen, "app_button"):
             self._log("Opening game")
             self._activity()
             time.sleep(3)
             return
-
+    
         if self.matcher.find(screen, "stop_queue"):
             self._log("In queue (stop visible)")
             self.in_queue = True
@@ -672,11 +672,11 @@ class MapleStoryIdleBot:
             if not self.queue_start_time:
                 self.queue_start_time = datetime.now()
             return
-
+    
         self._log("Unknown screen, tapping...")
         self.input.tap(*self.POSITIONS["center"])
         time.sleep(2)
-
+    
     def get_stats(self) -> Dict[str, Any]:
         return {
             "state": self.state.name,
