@@ -1,24 +1,24 @@
 """
-    MapleStory Idle Bot - Automated party quest runner.
-    Smart detection based on available templates.
-    """
-    import random
-    import time
-    import sys
-    from datetime import datetime, timedelta
-    from enum import Enum, auto
-    from typing import Optional, Dict, Any, Callable
-    import logging
-    from pathlib import Path
-    
-    _parent_dir = str(Path(__file__).parent.parent)
-    if _parent_dir not in sys.path:
+MapleStory Idle Bot - Automated party quest runner.
+Smart detection based on available templates.
+"""
+import random
+import time
+import sys
+from datetime import datetime, timedelta
+from enum import Enum, auto
+from typing import Optional, Dict, Any, Callable
+import logging
+from pathlib import Path
+
+_parent_dir = str(Path(__file__).parent.parent)
+if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
-    
-    from core.adb_controller import ADBController
-    from core.screen_capture import ScreenCapture
-    from core.template_matcher import TemplateMatcher, MatchResult
-    from core.input_handler import InputHandler
+
+from core.adb_controller import ADBController
+from core.screen_capture import ScreenCapture
+from core.template_matcher import TemplateMatcher, MatchResult
+from core.input_handler import InputHandler
     
     
     class BotState(Enum):
