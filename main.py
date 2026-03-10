@@ -121,7 +121,7 @@ BlueStacks Setup:
     )
     parser.add_argument(
         "--quest", "-q",
-        choices=["sleepywood", "ludibrium", "zakum"],
+        choices=["sleepywood", "ludibrium", "orbis"],
         help="Party quest to run"
     )
     parser.add_argument(
