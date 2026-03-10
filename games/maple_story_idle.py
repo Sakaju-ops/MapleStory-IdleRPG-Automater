@@ -631,14 +631,22 @@ class MapleStoryIdleBot:
             self.queue_start_time = datetime.now()
             return
 
-        quest = self.quest_choice
-        if self.matcher.find(screen, quest):
-            self._log(f"Selecting {quest}...")
-            self._check_and_click(screen, quest)
+        # Special handling for ORBIS - use fixed click position
+        if quest == "orbis":
+            self._log("Selecting ORBIS (forced position click)")
+            self.input.tap(*self.POSITIONS["orbis"])
             self._activity()
             time.sleep(1)
             return
-
+            
+        # Default behaviour for other PQ
+       if self.matcher.find(screen, quest):
+           self._log(f"Selecting {quest}...")
+           self._check_and_click(screen, quest)
+           self._activity()
+           time.sleep(1)
+           return
+           
         if self._check_and_click(screen, "pq_button"):
             self._log("Clicking PQ button")
             self._activity()
