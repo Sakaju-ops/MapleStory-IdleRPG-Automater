@@ -512,33 +512,32 @@ class MapleStoryIdleBot:
         self._detect_and_act(screen)
     
     def _check_wave(self, screen) -> int:
-    """Check if any wave indicator is visible. Returns wave number or 0."""
-    
-    if self.quest_choice == "ludibrium":
-        if self.matcher.find(screen, "wave_33"):
+        """Check if any wave indicator is visible. Returns wave number or 0."""
+        
+        if self.quest_choice == "ludibrium":
+            if self.matcher.find(screen, "wave_33"):
             return 3
-        if self.matcher.find(screen, "wave_22"):
+            if self.matcher.find(screen, "wave_22"):
             return 2
-        if self.matcher.find(screen, "wave_11"):
+            if self.matcher.find(screen, "wave_11"):
             return 1
-
-    elif self.quest_choice == "orbis":
-        if self.matcher.find(screen, "wave_333"):
+        
+        elif self.quest_choice == "orbis":
+            if self.matcher.find(screen, "wave_333"):
             return 3
-        if self.matcher.find(screen, "wave_222"):
+            if self.matcher.find(screen, "wave_222"):
             return 2
-        if self.matcher.find(screen, "wave_111"):
+            if self.matcher.find(screen, "wave_111"):
             return 1
-
-    else:  # sleepywood
-        if self.matcher.find(screen, "wave_3"):
+        else:  # sleepywood
+            if self.matcher.find(screen, "wave_3"):
             return 3
-        if self.matcher.find(screen, "wave_2"):
+            if self.matcher.find(screen, "wave_2"):
             return 2
-        if self.matcher.find(screen, "wave_1"):
+            if self.matcher.find(screen, "wave_1"):
             return 1
-
-    return 0
+        
+        return 0
     
     def _get_queue_template(self) -> str:
     """Get the in_queue template name based on quest choice."""
