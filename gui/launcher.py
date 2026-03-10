@@ -227,14 +227,14 @@ class BotLauncher:
             command=lambda: self._select_quest("ludibrium")
         )
         self.ludi_btn.pack(side="left", padx=(6, 0))
-
+        
         self.orbis_btn = ctk.CTkButton(
             quest_row,
             text="Orbis",
             width=100,
             height=32,
             font=ctk.CTkFont(size=11),
-            fg_color=self.COLORS["input_bg"],      
+            fg_color=self.COLORS["input_bg"],
             hover_color=self.COLORS["border"],
             text_color=self.COLORS["text_secondary"],
             corner_radius=6,
@@ -418,24 +418,28 @@ class BotLauncher:
         """Select quest type."""
         self.quest_var.set(quest)
         
+        # Reset all quest buttons to inactive state
+        inactive_style = {
+            "fg_color": self.COLORS["input_bg"],
+            "text_color": self.COLORS["text_secondary"]
+        }
+        
+        self.sleepy_btn.configure(**inactive_style)
+        self.ludi_btn.configure(**inactive_style)
+        self.orbis_btn.configure(**inactive_style)
+        
+        # Activate selected quest button
+        active_style = {
+            "fg_color": self.COLORS["primary"],
+            "text_color": "white"
+        }
+        
         if quest == "sleepywood":
-            self.sleepy_btn.configure(
-                fg_color=self.COLORS["primary"],
-                text_color="white"
-            )
-            self.ludi_btn.configure(
-                fg_color=self.COLORS["input_bg"],
-                text_color=self.COLORS["text_secondary"]
-            )
-        else:
-            self.ludi_btn.configure(
-                fg_color=self.COLORS["primary"],
-                text_color="white"
-            )
-            self.sleepy_btn.configure(
-                fg_color=self.COLORS["input_bg"],
-                text_color=self.COLORS["text_secondary"]
-            )
+            self.sleepy_btn.configure(**active_style)
+        elif quest == "ludibrium":
+            self.ludi_btn.configure(**active_style)
+        elif quest == "orbis":
+            self.orbis_btn.configure(**active_style)
     
     def _toggle_connection(self):
         """Toggle ADB connection."""
