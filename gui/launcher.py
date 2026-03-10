@@ -230,7 +230,7 @@ class BotLauncher:
 
         self.orbis_btn = ctk.CTkButton(
             quest_row,
-            text="orbis",
+            text="Orbis",
             width=100,
             height=32,
             font=ctk.CTkFont(size=11),
@@ -238,7 +238,7 @@ class BotLauncher:
             hover_color=self.COLORS["border"],
             text_color=self.COLORS["text_secondary"],
             corner_radius=6,
-            command=lambda: self._select_quest("ludibrium")
+            command=lambda: self._select_quest("orbis")
         )
         self.ludi_btn.pack(side="left", padx=(6, 0))
         
